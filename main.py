@@ -44,11 +44,41 @@ def async_cart_pole():
     agent = AsyncAgent(config)
     agent.run()
 
+HIDDEN = 100
+class ActorNet(nn.Module, BasicNet):
+    def __init__(self):
+        super(ActorNet, self).__init__()
+        self.fc = nn.Linear(4, HIDDEN)
+        self.actor = nn.Linear(HIDDEN, 2)
+        BasicNet.__init__(self, None, False, False)
+
+    def predict(self, x):
+        x = self.to_torch_variable(x)
+        x = F.relu(self.fc(x))
+        x = self.actor(x)
+        prob = F.softmax(x)
+        log_prob = F.log_softmax(x)
+        return prob, log_prob
+
+
+class CriticNet(nn.Module, BasicNet):
+    def __init__(self):
+        super(CriticNet, self).__init__()
+        self.fc = nn.Linear(4, HIDDEN)
+        self.critic = nn.Linear(HIDDEN, 1)
+        BasicNet.__init__(self, None, False, False)
+
+    def predict(self, x):
+        x = self.to_torch_variable(x)
+        x = F.relu(self.fc(x))
+        value = self.critic(x)
+        return value
+
 def a3c_cart_pole():
     config = Config()
     config.task_fn = lambda: CartPole()
-    config.optimizer_fn = lambda params: torch.optim.Adam(params, 0.001)
-    config.network_fn = lambda: ActorCriticFCNet(4, 2)
+    config.actor_fn = lambda: ActorNet()
+    config.critic_fn = lambda: CriticNet()
     config.policy_fn = SamplePolicy
     config.worker = AdvantageActorCritic
     config.discount = 0.99
@@ -233,10 +263,10 @@ if __name__ == '__main__':
 
     # dqn_cart_pole()
     # async_cart_pole()
-    # a3c_cart_pole()
+    a3c_cart_pole()
     # a3c_pendulum()
     # a3c_walker()
-    ddpg_pendulum()
+    # ddpg_pendulum()
     # ddpg_walker()
 
     # dqn_pixel_atari('PongNoFrameskip-v3')

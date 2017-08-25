@@ -25,18 +25,18 @@ def train(id, config, learning_network, target_network):
         config.logger.debug('worker %d, episode %d, return %f, avg return %f, episode steps %d, total steps %d' % (
             id, episode, rewards[-1], np.mean(rewards[-100:]), steps, config.total_steps.value))
 
-def evaluate(config, task, learning_network):
+def evaluate(config, task, actor, critic):
     test_rewards = []
     test_points = []
-    worker = config.worker(config, learning_network, None)
+    worker = config.worker(config, actor, critic)
     # config.logger = Logger('./evaluation_log', gym.logger)
     while True:
         steps = config.total_steps.value
         if steps % config.test_interval == 0:
-            worker.worker_network.load_state_dict(learning_network.state_dict())
-            with open('data/%s-%s-model-%s.bin' % (
-                    config.tag, config.worker.__name__, task.name), 'wb') as f:
-                pickle.dump(learning_network.state_dict(), f)
+            # worker.worker_network.load_state_dict(learning_network.state_dict())
+            # with open('data/%s-%s-model-%s.bin' % (
+            #         config.tag, config.worker.__name__, task.name), 'wb') as f:
+            #     pickle.dump(learning_network.state_dict(), f)
             rewards = np.zeros(config.test_repetitions)
             for i in range(config.test_repetitions):
                 rewards[i] = worker.episode(deterministic=True)[1]
@@ -62,15 +62,17 @@ class AsyncAgent:
     def run(self):
         config = self.config
         task = config.task_fn()
-        learning_network = config.network_fn()
-        learning_network.share_memory()
-        target_network = config.network_fn()
-        target_network.share_memory()
-        target_network.load_state_dict(learning_network.state_dict())
+        actor = config.actor_fn()
+        actor.share_memory()
+        critic = config.critic_fn()
+        critic.share_memory()
+        # target_network = config.network_fn()
+        # target_network.share_memory()
+        # target_network.load_state_dict(learning_network.state_dict())
 
         os.environ['OMP_NUM_THREADS'] = '1'
-        args = [(i, config, learning_network, target_network) for i in range(config.num_workers)]
-        args.append((config, task, learning_network))
+        args = [(i, config, actor, critic) for i in range(config.num_workers)]
+        args.append((config, task, actor, critic))
         procs = [mp.Process(target=train, args=args[i]) for i in range(config.num_workers)]
         procs.append(mp.Process(target=evaluate, args=args[-1]))
         for p in procs: p.start()
