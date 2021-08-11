@@ -1,3 +1,6 @@
+## This is an old version for the https://github.com/ShangtongZhang/DeepRL where we can find some missing classes used in the https://github.com/wassname/rl-portfolio-management
+ipynb files
+
 # DeepRL
 Highly modularized implementation of popular deep RL algorithms by PyTorch. My principal here is to
 reuse as much components as I can through different algorithms, use as less tricks as I can and switch
